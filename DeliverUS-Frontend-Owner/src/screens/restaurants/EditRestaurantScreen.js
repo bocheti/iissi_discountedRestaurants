@@ -4,7 +4,7 @@ import * as ExpoImagePicker from 'expo-image-picker'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import * as yup from 'yup'
 import DropDownPicker from 'react-native-dropdown-picker'
-import { update, getRestaurantCategories, getDetail } from '../../api/RestaurantEndpoints'
+import { update, getRestaurantCategories, getDetail, getAll } from '../../api/RestaurantEndpoints'
 import InputItem from '../../components/InputItem'
 import TextRegular from '../../components/TextRegular'
 import * as GlobalStyles from '../../styles/GlobalStyles'
@@ -21,8 +21,9 @@ export default function EditRestaurantScreen ({ navigation, route }) {
   const [restaurantCategories, setRestaurantCategories] = useState([])
   const [backendErrors, setBackendErrors] = useState()
   const [restaurant, setRestaurant] = useState({})
+  const [codes, setCodes] = useState([])
 
-  const [initialRestaurantValues, setInitialRestaurantValues] = useState({ name: null, description: null, address: null, postalCode: null, url: null, shippingCosts: null, email: null, phone: null, restaurantCategoryId: null, logo: null, heroImage: null })
+  const [initialRestaurantValues, setInitialRestaurantValues] = useState({ name: null, description: null, address: null, postalCode: null, url: null, shippingCosts: null, email: null, phone: null, restaurantCategoryId: null, discount: null, discountCode: null, logo: null, heroImage: null })
   const validationSchema = yup.object().shape({
     name: yup
       .string()
@@ -56,7 +57,17 @@ export default function EditRestaurantScreen ({ navigation, route }) {
       .number()
       .positive()
       .integer()
-      .required('Restaurant category is required')
+      .required('Restaurant category is required'),
+    discount: yup
+      .number()
+      .nullable()
+      .min(1, 'Discount cannot be smaller than 1')
+      .max(99, 'Discount cannot be greater than 99'),
+    discountCode: yup
+      .string()
+      .nullable()
+      .max(10, 'Discount code must have at most 10 characters')
+      .notOneOf(codes, 'Discount code already in use')
   })
 
   useEffect(() => {
@@ -101,6 +112,24 @@ export default function EditRestaurantScreen ({ navigation, route }) {
     }
     fetchRestaurantCategories()
   }, [])
+
+  useEffect(() => {
+    async function fetchCodes () {
+      try {
+        const fetchedCodes = await getAll()
+        const codeList = fetchedCodes.map((e) => e.discountCode)
+        setCodes(codeList)
+      } catch (error) {
+        showMessage({
+          message: `There was an error while retrieving discount codes. ${error}`,
+          type: 'error',
+          style: GlobalStyles.flashStyle,
+          titleStyle: GlobalStyles.flashTextStyle
+        })
+      }
+    }
+    fetchCodes()
+  }, [route])
 
   useEffect(() => {
     (async () => {
@@ -185,6 +214,14 @@ export default function EditRestaurantScreen ({ navigation, route }) {
               <InputItem
                 name='phone'
                 label='Phone:'
+              />
+              <InputItem
+                name='discount'
+                label='Discount:'
+              />
+              <InputItem
+                name='discountCode'
+                label='Discount Code:'
               />
 
               <DropDownPicker

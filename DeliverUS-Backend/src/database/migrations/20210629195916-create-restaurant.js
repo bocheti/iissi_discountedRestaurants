@@ -86,6 +86,12 @@ module.exports = {
           },
           key: 'id'
         }
+      },
+      discount: {
+        type: Sequelize.INTEGER
+      },
+      discountCode: {
+        type: Sequelize.STRING
       }
     })
   },

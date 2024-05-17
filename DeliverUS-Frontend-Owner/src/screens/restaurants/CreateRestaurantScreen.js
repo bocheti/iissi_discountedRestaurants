@@ -4,7 +4,7 @@ import * as ExpoImagePicker from 'expo-image-picker'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import * as yup from 'yup'
 import DropDownPicker from 'react-native-dropdown-picker'
-import { create, getRestaurantCategories } from '../../api/RestaurantEndpoints'
+import { create, getRestaurantCategories, getAll } from '../../api/RestaurantEndpoints'
 import InputItem from '../../components/InputItem'
 import TextRegular from '../../components/TextRegular'
 import * as GlobalStyles from '../../styles/GlobalStyles'
@@ -18,8 +18,9 @@ export default function CreateRestaurantScreen ({ navigation }) {
   const [open, setOpen] = useState(false)
   const [restaurantCategories, setRestaurantCategories] = useState([])
   const [backendErrors, setBackendErrors] = useState()
+  const [codes, setCodes] = useState([])
 
-  const initialRestaurantValues = { name: null, description: null, address: null, postalCode: null, url: null, shippingCosts: null, email: null, phone: null, restaurantCategoryId: null }
+  const initialRestaurantValues = { name: null, description: null, address: null, postalCode: null, url: null, shippingCosts: null, email: null, phone: null, restaurantCategoryId: null, discount: null, discountCode: null }
   const validationSchema = yup.object().shape({
     name: yup
       .string()
@@ -53,7 +54,17 @@ export default function CreateRestaurantScreen ({ navigation }) {
       .number()
       .positive()
       .integer()
-      .required('Restaurant category is required')
+      .required('Restaurant category is required'),
+    discount: yup
+      .number()
+      .nullable()
+      .min(1, 'Discount cannot be smaller than 1')
+      .max(99, 'Discount cannot be greater than 99'),
+    discountCode: yup
+      .string()
+      .nullable()
+      .max(10, 'Discount code must have at most 10 characters')
+      .notOneOf(codes, 'Discount code already in use')
   })
 
   useEffect(() => {
@@ -88,6 +99,24 @@ export default function CreateRestaurantScreen ({ navigation }) {
         }
       }
     })()
+  }, [])
+
+  useEffect(() => {
+    async function fetchCodes () {
+      try {
+        const fetchedCodes = await getAll()
+        const codeList = fetchedCodes.map((e) => e.discountCode)
+        setCodes(codeList)
+      } catch (error) {
+        showMessage({
+          message: `There was an error while retrieving discount codes. ${error}`,
+          type: 'error',
+          style: GlobalStyles.flashStyle,
+          titleStyle: GlobalStyles.flashTextStyle
+        })
+      }
+    }
+    fetchCodes()
   }, [])
 
   const pickImage = async (onSuccess) => {
@@ -160,6 +189,14 @@ export default function CreateRestaurantScreen ({ navigation }) {
               <InputItem
                 name='phone'
                 label='Phone:'
+              />
+              <InputItem
+                name='discount'
+                label='Discount:'
+              />
+              <InputItem
+                name='discountCode'
+                label='Discount Code:'
               />
 
               <DropDownPicker
